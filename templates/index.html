@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌤️ Clima & Hora Mundial</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>">
+</head>
+<body class="padrao animated-bg">
+  <div class="container">
+    <h1>🌍 Clima & Hora Mundial</h1>
+    <p style="color: #7f8c8d; margin-bottom: 30px; font-size: 16px;">
+      Descubra o clima e hora atual de qualquer cidade do mundo
+    </p>
+    
+    <form method="POST">
+      <div style="position: relative;">
+        <input 
+          type="text" 
+          name="city" 
+          placeholder="🏙️ Digite o nome da cidade (ex: São Paulo, Paris, Tokyo)" 
+          required
+          autocomplete="off"
+        >
+      </div>
+      <button type="submit" style="position: relative; overflow: hidden;">
+        🔍 Buscar Clima
+      </button>
+    </form>
+    
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ecf0f1;">
+      <p style="color: #95a5a6; font-size: 14px;">
+        💡 Dica: Digite apenas o nome da cidade principal
+      </p>
+    </div>
+  </div>
+  
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

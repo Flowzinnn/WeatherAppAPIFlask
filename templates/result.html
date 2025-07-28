@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌤️ {{ city }} - Clima e Hora</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='animations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='visual-effects.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    /* Video de fundo */
+    .bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: -2;
+    }
+
+    /* Overlay escuro para melhor legibilidade */
+    .video-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: -1;
+    }
+
+    /* Container principal */
+    .result-container {
+      position: relative;
+      z-index: 1;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      color: white;
+      text-align: center;
+    }
+
+    /* Header com nome da cidade */
+    .city-header {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 20px 40px;
+      margin-bottom: 30px;
+      animation: slideInFromTop 0.8s ease-out;
+    }
+
+    .city-name {
+      font-size: 3em;
+      font-weight: 700;
+      margin: 0;
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      background: linear-gradient(45deg, #fff, #f1c40f, #fff);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientMove 3s ease-in-out infinite;
+    }
+
+    @keyframes gradientMove {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    /* Container principal do clima */
+    .weather-main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 40px;
+      margin-bottom: 40px;
+      animation: slideInFromLeft 1s ease-out 0.3s both;
+    }
+
+    .weather-icon-container {
+      position: relative;
+    }
+
+    .weather-icon {
+      width: 150px;
+      height: 150px;
+      filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+      animation: gentleFloat 4s ease-in-out infinite;
+    }
+
+    /* Animação suave e controlada para o ícone */
+    @keyframes gentleFloat {
+      0%, 100% { 
+        transform: translateY(0px) scale(1); 
+      }
+      50% { 
+        transform: translateY(-6px) scale(1.02); 
+      }
+    }
+
+    /* Garantir que apenas a animação correta seja aplicada */
+    .weather-icon {
+      animation: gentleFloat 4s ease-in-out infinite !important;
+    }
+
+    /* Prevenir conflitos de animação */
+    .weather-icon.levitate {
+      animation: gentleFloat 4s ease-in-out infinite !important;
+    }
+
+    .weather-icon-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .weather-details {
+      text-align: left;
+    }
+
+    .temperature {
+      font-size: 4.5em;
+      font-weight: 800;
+      margin: 0;
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+      background: linear-gradient(45deg, #ff6b6b, #feca57, #ff9ff3, #54a0ff);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: temperatureGradient 4s ease-in-out infinite;
+    }
+
+    @keyframes temperatureGradient {
+      0%, 100% { background-position: 0% 50%; }
+      25% { background-position: 100% 50%; }
+      50% { background-position: 100% 100%; }
+      75% { background-position: 0% 100%; }
+    }
+
+    .description {
+      font-size: 1.8em;
+      margin: 10px 0;
+      text-transform: capitalize;
+      font-weight: 600;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Cards de informação */
+    .info-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      max-width: 800px;
+      margin-bottom: 40px;
+      animation: slideInFromBottom 1s ease-out 0.6s both;
+    }
+
+    .info-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 25px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .info-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .info-card:hover::before {
+      left: 100%;
+    }
+
+    .info-card:hover {
+      transform: translateY(-10px) scale(1.05);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .info-icon {
+      font-size: 2.5em;
+      margin-bottom: 15px;
+      display: block;
+    }
+
+    .info-label {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      opacity: 0.8;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .info-value {
+      font-size: 2em;
+      font-weight: 700;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Botão de volta */
+    .back-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      text-decoration: none;
+      padding: 15px 30px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      animation: slideInFromBottom 1s ease-out 0.9s both;
+    }
+
+    .back-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s;
+    }
+
+    .back-button:hover::before {
+      left: 100%;
+    }
+
+    .back-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      background: rgba(255, 255, 255, 0.3);
+      text-decoration: none;
+      color: white;
+    }
+
+    /* Animações de entrada */
+    @keyframes slideInFromTop {
+      from {
+        opacity: 0;
+        transform: translateY(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideInFromLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-100px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideInFromBottom {
+      from {
+        opacity: 0;
+        transform: translateY(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Error styling */
+    .error-container {
+      background: rgba(231, 76, 60, 0.2);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(231, 76, 60, 0.4);
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 500px;
+      animation: slideInFromTop 0.8s ease-out;
+    }
+
+    .error-message {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    /* Responsividade */
+    @media (max-width: 768px) {
+      .weather-main {
+        flex-direction: column;
+        gap: 20px;
+      }
+      
+      .city-name {
+        font-size: 2.2em;
+      }
+      
+      .temperature {
+        font-size: 3.5em;
+      }
+      
+      .info-cards {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+      
+      .weather-details {
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .city-header {
+        padding: 15px 20px;
+      }
+      
+      .city-name {
+        font-size: 1.8em;
+      }
+      
+      .temperature {
+        font-size: 3em;
+      }
+      
+      .weather-icon {
+        width: 120px;
+        height: 120px;
+      }
+    }
+
+    /* Fallback para quando não há vídeo */
+    .bg-fallback {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+    }
+
+    .bg-fallback.ensolarado {
+      background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+    }
+
+    .bg-fallback.chuva {
+      background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+    }
+
+    .bg-fallback.nublado {
+      background: linear-gradient(135deg, #b2bec3 0%, #636e72 100%);
+    }
+
+    .bg-fallback.padrao {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .bg-fallback.noite {
+      background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
+    }
+
+    .bg-fallback.dia {
+      background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+    }
+  </style>
+</head>
+<body class="{{ time_theme }} {{ weather_theme }}">
+  <!-- Vídeo de fundo -->
+  {% if not error %}
+  <video class="bg-video" autoplay muted loop playsinline>
+    <source src="{{ url_for('static', filename='videos/' + weather_theme + '.mp4') }}" type="video/mp4">
+    <source src="{{ url_for('static', filename='videos/' + weather_theme + '.webm') }}" type="video/webm">
+  </video>
+  {% endif %}
+  
+  <!-- Fallback de fundo quando não há vídeo -->
+  <div class="bg-fallback {{ weather_theme if not error else 'padrao' }}"></div>
+  
+  <!-- Overlay para melhor legibilidade -->
+  <div class="video-overlay"></div>
+
+  <div class="result-container">
+    {% if error %}
+      <div class="error-container">
+        <div class="error-message">
+          ❌ {{ error }}
+        </div>
+        <a href="/" class="back-button">
+          ↩️ Tentar Novamente
+        </a>
+      </div>
+    {% else %}
+      <!-- Header da cidade -->
+      <div class="city-header glass-effect shimmer breathe">
+        <h1 class="city-name neon-text">📍 {{ city }}</h1>
+      </div>
+
+      <!-- Informações principais do clima -->
+      <div class="weather-main">
+        <div class="weather-icon-container">
+          <div class="weather-icon-glow pulse-glow"></div>
+          <img src="http://openweathermap.org/img/wn/{{ icon }}@4x.png" 
+               alt="{{ desc }}" 
+               class="weather-icon">
+        </div>
+        
+        <div class="weather-details">
+          <div class="temperature neon-text">{{ "%.0f"|format(temp) }}°C</div>
+          <div class="description">{{ desc }}</div>
+        </div>
+      </div>
+
+      <!-- Cards de informação -->
+      <div class="info-cards">
+        <div class="info-card glass-effect shimmer wave-effect">
+          <span class="info-icon rotate-slow">🕐</span>
+          <div class="info-label">Hora Local</div>
+          <div class="info-value">{{ time_str }}</div>
+        </div>
+        
+        <div class="info-card glass-effect shimmer wave-effect">
+          <span class="info-icon">🌡️</span>
+          <div class="info-label">Sensação</div>
+          <div class="info-value">{{ "%.0f"|format(temp) }}°C</div>
+        </div>
+        
+        <div class="info-card glass-effect shimmer wave-effect">
+          <span class="info-icon">🌍</span>
+          <div class="info-label">Período</div>
+          <div class="info-value">{{ 'Dia' if time_theme == 'dia' else 'Noite' }}</div>
+        </div>
+      </div>
+
+      <!-- Botão de volta -->
+      <a href="/" class="back-button glass-effect shimmer">
+        ↩️ Nova Busca
+      </a>
+    {% endif %}
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <script>
+    // Script específico para a página de resultado
+    document.addEventListener('DOMContentLoaded', function() {
+      // Verificar se o vídeo carregou, se não, usar fallback
+      const video = document.querySelector('.bg-video');
+      const fallback = document.querySelector('.bg-fallback');
+      
+      if (video) {
+        video.addEventListener('error', function() {
+          fallback.style.zIndex = '-2';
+        });
+        
+        video.addEventListener('canplay', function() {
+          fallback.style.display = 'none';
+        });
+      }
+      
+      // Controle de animações para evitar conflitos
+      const weatherIcon = document.querySelector('.weather-icon');
+      if (weatherIcon) {
+        // Garantir que apenas uma animação seja aplicada
+        weatherIcon.style.animation = 'gentleFloat 4s ease-in-out infinite';
+      }
+      
+      // Reduzir animações em dispositivos móveis para melhor performance
+      if (window.innerWidth < 768) {
+        const glowElements = document.querySelectorAll('.pulse-glow');
+        glowElements.forEach(el => {
+          el.style.animation = 'none';
+        });
+        
+        const shimmerElements = document.querySelectorAll('.shimmer');
+        shimmerElements.forEach(el => {
+          el.classList.remove('shimmer');
+        });
+      }
+      
+      // Adicionar efeito de partículas específico para a página de resultado
+      if (!document.querySelector('.particles-result')) {
+        createResultParticles();
+      }
+    });
+    
+    function createResultParticles() {
+      const container = document.createElement('div');
+      container.className = 'weather-particles';
+      document.body.appendChild(container);
+      
+      const weather = '{{ weather_theme }}';
+      
+      // Criar partículas específicas baseadas no clima
+      if (weather === 'chuva') {
+        createRainParticles(container);
+      } else if (weather === 'ensolarado') {
+        createSunParticles(container);
+      } else if (weather === 'nublado') {
+        createCloudParticles(container);
+      }
+    }
+    
+    function createRainParticles(container) {
+      for (let i = 0; i < 50; i++) {
+        const drop = document.createElement('div');
+        drop.className = 'rain-particle';
+        drop.style.left = Math.random() * 100 + '%';
+        drop.style.animationDelay = Math.random() * 1 + 's';
+        drop.style.animationDuration = (0.5 + Math.random() * 0.5) + 's';
+        container.appendChild(drop);
+      }
+    }
+    
+    function createSunParticles(container) {
+      for (let i = 0; i < 20; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'sun-particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.top = Math.random() * 100 + '%';
+        particle.style.animationDelay = Math.random() * 8 + 's';
+        container.appendChild(particle);
+      }
+    }
+    
+    function createCloudParticles(container) {
+      for (let i = 0; i < 8; i++) {
+        const cloud = document.createElement('div');
+        cloud.className = 'cloud-particle';
+        cloud.style.width = (50 + Math.random() * 100) + 'px';
+        cloud.style.height = (30 + Math.random() * 50) + 'px';
+        cloud.style.top = Math.random() * 50 + '%';
+        cloud.style.animationDelay = Math.random() * 15 + 's';
+        cloud.style.animationDuration = (15 + Math.random() * 10) + 's';
+        container.appendChild(cloud);
+      }
+    }
+  </script>
+</body>
+</html>
